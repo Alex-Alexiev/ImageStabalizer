@@ -24,8 +24,9 @@ def getAngle(img1, img2):
 
     thetaTotal = 0
     n = 0
+    k = 0.6
 
-    for mat in matches[:10]:
+    for mat in matches[:20]:
         img1_idx = mat.queryIdx
         img2_idx = mat.trainIdx
 
@@ -35,7 +36,10 @@ def getAngle(img1, img2):
         deltaX = x2-x1
         deltaY = y2-y1
         if (deltaY != 0):
-            thetaTotal += -math.atan(deltaX/deltaY)
+            if (deltaY < 0):
+                thetaTotal += math.atan(deltaX/deltaY)
+            else:
+                thetaTotal += -math.atan(deltaX/deltaY)
             n+=1
 
     if (n>0):
@@ -46,23 +50,23 @@ def getAngle(img1, img2):
     return 0
 
 num = 0
+first = True
 
 try:    
     while(True):
         num+=1
         ret, img = cap.read()
+        if (first):
+            first = False
+            prevImg = img
         if (not ret): 
             break
-        if (not first and num > 3):  
+        if (num > 4):  
             num = 0
             angle = getAngle(img, prevImg)
-            totalAngle += angle
             print(int(angle))
-            # int(addToAve(angle)), int(totalAngle))
-        else:
-            first = False
+            prevImg = img
         cv2.imshow('original', img)
-        prevImg = img 
         if cv2.waitKey(33) == 27:  
             break   
 

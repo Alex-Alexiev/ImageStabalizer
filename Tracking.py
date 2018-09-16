@@ -6,7 +6,6 @@ face_cascade = cv2.CascadeClassifier('C:/Dev/LanguagesLibraries/OpenCV/opencv/so
 
 cap = cv2.VideoCapture(0)
 cv2.namedWindow("original")
-firstLoop = True
 
 frameSize = 500
 ratio = 0.75
@@ -46,6 +45,7 @@ def getAngle(img1, img2):
 
     thetaTotal = 0
     n = 0
+    k = 0.6
 
     for mat in matches[:20]:
         img1_idx = mat.queryIdx
@@ -57,9 +57,12 @@ def getAngle(img1, img2):
         deltaX = x2-x1
         deltaY = y2-y1
         if (deltaY != 0):
-            thetaTotal += -math.atan(deltaX/deltaY)
+            if (deltaY < 0):
+                thetaTotal += math.atan(deltaX/deltaY)
+            else:
+                thetaTotal += -math.atan(deltaX/deltaY)
             n+=1
-            
+
     if (n>0):
         theta = thetaTotal/n
         theta = (theta*180)/math.pi
@@ -72,8 +75,13 @@ def rotate(img, angle):
     rotation_matrix = cv2.getRotationMatrix2D((num_cols/2, num_rows/2), angle, 1)
     return cv2.warpAffine(img, rotation_matrix, (num_cols, num_rows))
 
+num = 0
+firstLoop = True
+k = 0.1
+
 try:    
     while(True):
+        num+=1
 
         ret, img = cap.read()
         if (not ret):
@@ -96,9 +104,14 @@ try:
         if (firstLoop is True):
             x = (wi-fx)/2
             y = (hi-fy)/2
+            prevImg = img
             firstLoop = False
-        else:
+        elif (num > 3):
             angle = getAngle(img, prevImg)
+            print(angle)
+            if (angle is not None):
+                img = rotate(img, -angle*k)
+            num = 0
 
         #if object was found
         if (xo > -1):
@@ -115,15 +128,12 @@ try:
             if (y > (hi-fy)):
                 y = hi-fy
 
-        # if (angle is not None):
-        #     print(angle)
-        #     img = rotate(img, -angle)
+        
+
         img = img[int(y):int(y+fy), int(x):int(x+fx)]
         
         cv2.imshow('original', img)
-
-        prevImg = img 
-
+        
         if cv2.waitKey(33) == 27:
             break
 
