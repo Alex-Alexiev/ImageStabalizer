@@ -1,15 +1,13 @@
 import numpy as np
 import cv2
+from matplotlib import pyplot as plt
 import math
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 cap = cv2.VideoCapture(1)
-#cv2.namedWindow("original")
+cv2.namedWindow("original")
 cv2.namedWindow("smooth")
-
-frameSize = 500
-ratio = 0.75
 
 def getCoords(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -18,25 +16,15 @@ def getCoords(img):
         return faces[0]
     return [-1,0,0,0]
 
-def getCoordsColour(img):
-
-    blur = cv2.blur(img, (10,10))
-    hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (40, 40, 0), (80, 255,255))
-    conts, contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for cnt in contours:  
-        area = cv2.contourArea(cnt)
-        if (area > 2000):
-            return  cv2.boundingRect(cnt)
-
-    return -1,0,0,0
+def rotate(img, angle):
+    num_rows, num_cols = img.shape[:2]
+    rotation_matrix = cv2.getRotationMatrix2D((num_cols/2, num_rows/2), angle, 1)
+    return cv2.warpAffine(img, rotation_matrix, (num_cols, num_rows))
 
 def getAngle(img1, img2):
 
     orb = cv2.ORB_create()
 
-    #maybe add gaussian filter w/ 5 kernel
     kp1, des1 = orb.detectAndCompute(img1, None) 
     kp2, des2 = orb.detectAndCompute(img2, None)
 
@@ -47,8 +35,10 @@ def getAngle(img1, img2):
 
     thetaTotal = 0
     n = 0
-    deltaYThresh = 5
-    deltaXThresh = 0
+    deltaYThresh = 3
+
+    ccw = 3
+    cw = 1
 
     for mat in matches[:15]:
         img1_idx = mat.queryIdx
@@ -56,18 +46,16 @@ def getAngle(img1, img2):
 
         (x1,y1) = kp1[img1_idx].pt
         (x2,y2) = kp2[img2_idx].pt
-
+        
         deltaX = x2-x1
-        if (deltaX < deltaXThresh):
-            deltaX = 0
-        deltaY = y2-y1
+        deltaY = y2-y1 
         if (deltaY < deltaYThresh):
             deltaY = 0
         if (deltaY != 0):
             if (deltaY < 0):
-                thetaTotal += -math.atan(deltaX/deltaY)
+                thetaTotal += -math.atan(deltaX/deltaY)*ccw
             else:
-                thetaTotal += math.atan(deltaX/deltaY)
+                thetaTotal += math.atan(deltaX/deltaY)*cw
             n+=1
 
     if (n>0):
@@ -77,27 +65,24 @@ def getAngle(img1, img2):
     
     return 0
 
-def rotate(img, angle):
-    num_rows, num_cols = img.shape[:2]
-    rotation_matrix = cv2.getRotationMatrix2D((num_cols/2, num_rows/2), angle, 1)
-    return cv2.warpAffine(img, rotation_matrix, (num_cols, num_rows))
-
 num = 0
-firstLoop = True
-k = 0.1
-step = 2
+first = True
 angle = 0
+
+frameSize = 400
+ratio = 0.75
+
+step = 3
 
 try:    
     while(True):
         num+=1
-
         ret, img = cap.read()
-        if (not ret):
+        if (not ret): 
             break
+        imRaw = img.copy()
 
-        imRaw = img
-
+        xo,yo,wo,ho = getCoords(img)
 
         wi = np.size(img, 1)
         hi = np.size(img, 0)
@@ -108,18 +93,12 @@ try:
         cx = int(xo+(wo/2))
         cy = int(yo+(ho/2))
 
-        #default to center
-        if (firstLoop is True):
+        if (first):
             x = (wi-fx)/2
             y = (hi-fy)/2
-            prevImg = img
-            firstLoop = False
-        elif (num > step):
-            angle += k*getAngle(img, prevImg)
-            print(angle)
-            num = 0
-
-        #if object was found
+            first = False
+            prevImg = img.copy()
+        
         if (xo > -1):
             cv2.rectangle(img,(xo,yo),(xo+wo,yo+ho),(0,0,255),2)
             #cv2.circle(img,(cx, cy), 1, (0,0,255), -1)
@@ -134,15 +113,19 @@ try:
             if (y > (hi-fy)):
                 y = hi-fy
 
-        if (angle is not None):
-            img = rotate(img, angle)
+        if (num > step):  
+            num = 0 
+            # angV = getAngle(imRaw, prevImg)
+            # angle += 0.09*angV
+            # print(int(angle), int(angV))
+            prevImg = imRaw  
+
         img = img[int(y):int(y+fy), int(x):int(x+fx)]
-        
-        cv2.imshow("smooth", img) 
-        #cv2.imshow("original", imRaw)
-        
-        if cv2.waitKey(33) == 27:
-            break
+       # img = rotate(img, angle)
+        cv2.imshow('smooth', img)
+        cv2.imshow('original', imRaw)
+        if cv2.waitKey(33) == 27:  
+            break    
 
     cap.release()
     cv2.destroyAllWindows()
