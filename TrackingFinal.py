@@ -4,10 +4,18 @@ from matplotlib import pyplot as plt
 import math
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+body_cascade = cv2.CascadeClassifier('haarcascade_fullbody.xml')
 
 cap = cv2.VideoCapture(1)
+
 cv2.namedWindow("original")
 cv2.namedWindow("smooth")
+
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+
+rough = cv2.VideoWriter('rough.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width, frame_height))
+smooth = cv2.VideoWriter('nice.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width, frame_height))
 
 def getCoords(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -123,11 +131,15 @@ try:
         img = img[int(y):int(y+fy), int(x):int(x+fx)]
        # img = rotate(img, angle)
         cv2.imshow('smooth', img)
+        smooth.write(img)
         cv2.imshow('original', imRaw)
+        rough.write(imRaw)
         if cv2.waitKey(33) == 27:  
             break    
 
-    cap.release()
+    cap.release()  
+    rough.release()
+    smooth.release()
     cv2.destroyAllWindows()
 
 except:
