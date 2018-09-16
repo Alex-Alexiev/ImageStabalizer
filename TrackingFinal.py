@@ -6,13 +6,13 @@ import math
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 body_cascade = cv2.CascadeClassifier('haarcascade_fullbody.xml')
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 cv2.namedWindow("original")
 cv2.namedWindow("smooth")
 
-frame_width = int(cap.get(3))
-frame_height = int(cap.get(4))
+frame_width = int(cap.get(1))
+frame_height = int(cap.get(2))
 
 rough = cv2.VideoWriter('rough.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width, frame_height))
 smooth = cv2.VideoWriter('nice.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame_width, frame_height))
